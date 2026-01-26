@@ -1,20 +1,16 @@
 ﻿import express from 'express';
-import { body } from 'express-validator';
 import * as tableController from '../controllers/tableController.js';
-import { validate } from '../middleware/validation.js';
+import { verifyToken } from '../middleware/authMiddleware.js';
+import { validateRequest } from '../middleware/validateSchema.js';
+import { createTableSchema, updateTableSchema } from '../utils/schemas.js';
 
 const router = express.Router();
 
 router.get('/', tableController.getAllTables);
-router.post('/', [
-  body('name').notEmpty().trim().withMessage('Table name is required'),
-  body('max_players').optional().isInt({ min: 1, max: 7 }).withMessage('Max players must be between 1 and 7')
-], validate, tableController.createTable);
+router.post('/', verifyToken, validateRequest(createTableSchema), tableController.createTable);
 router.get('/:id', tableController.getTableById);
-router.put('/:id', tableController.updateTable);
-router.delete('/:id', tableController.deleteTable);
-router.get('/:id/players', tableController.getTablePlayers);
+router.put('/:id', verifyToken, validateRequest(updateTableSchema), tableController.updateTable);
+router.delete('/:id', verifyToken, tableController.deleteTable);
 
 export default router;
-
 

@@ -2,14 +2,7 @@ class GameService {
   static createDeck() {
     const suits = ['♠', '♥', '♦', '♣'];
     const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    const deck = [];
-
-    for (let suit of suits) {
-      for (let rank of ranks) {
-        deck.push({ rank, suit, value: this.getCardValue(rank) });
-      }
-    }
-
+    const deck = suits.flatMap(suit => ranks.map(rank => ({ rank, suit, value: this.getCardValue(rank) })));
     return this.shuffleDeck(deck);
   }
 
@@ -54,88 +47,39 @@ class GameService {
   }
 
   static dealInitialCards(deck, playerCount) {
-    const hands = {
-      dealer: [],
-      players: {}
-    };
-
-    for (let round = 0; round < 2; round++) {
-      for (let i = 0; i < playerCount; i++) {
-        if (!hands.players[i]) hands.players[i] = [];
-        hands.players[i].push(deck.pop());
-      }
-      hands.dealer.push(deck.pop());
+    const players = [];
+    for (let i = 0; i < playerCount; i++) {
+      players.push([]);
     }
+    const dealer = [];
 
-    return { hands, deck };
+    for (let i = 0; i < playerCount; i++) {
+      players[i].push(deck.pop());
+    }
+    dealer.push(deck.pop());
+
+    for (let i = 0; i < playerCount; i++) {
+      players[i].push(deck.pop());
+    }
+    dealer.push(deck.pop());
+
+    return { deck, dealer, players };
   }
 
   static determineWinner(playerCards, dealerCards) {
     const playerValue = this.calculateHandValue(playerCards);
     const dealerValue = this.calculateHandValue(dealerCards);
 
-    if (playerValue > 21) {
-      return {
-        result: 'BUST',
-        message: 'Player busts! Dealer wins.',
-        playerBusts: true
-      };
-    }
-
-    if (dealerValue > 21) {
-      return {
-        result: 'WIN',
-        message: 'Dealer busts! Player wins.',
-        dealerBusts: true
-      };
-    }
-
-    if (playerValue > dealerValue) {
-      return {
-        result: 'WIN',
-        message: `Player ${playerValue} vs Dealer ${dealerValue}. Player wins!`
-      };
-    } else if (playerValue < dealerValue) {
-      return {
-        result: 'LOSE',
-        message: `Player ${playerValue} vs Dealer ${dealerValue}. Dealer wins!`
-      };
-    } else {
-      return {
-        result: 'PUSH',
-        message: `Both have ${playerValue}. Push!`
-      };
-    }
+    if (playerValue > 21) return { result: 'BUST', message: 'Player busts!' };
+    if (dealerValue > 21) return { result: 'WIN', message: 'Dealer busts!' };
+    if (playerValue > dealerValue) return { result: 'WIN', message: 'Player wins!' };
+    if (playerValue < dealerValue) return { result: 'LOSE', message: 'Dealer wins!' };
+    return { result: 'PUSH', message: 'Push!' };
   }
 
   static calculatePayout(betAmount, result) {
-    let multiplier;
-
-    if (result === 'BLACKJACK') {
-      multiplier = 2.5;
-    } else if (result === 'WIN') {
-      multiplier = 2;
-    } else if (result === 'PUSH') {
-      multiplier = 1;
-    } else {
-      multiplier = 0;
-    }
-
-    return Math.round(betAmount * multiplier);
-  }
-
-  static hit(cards, deck) {
-    const newCard = deck.pop();
-    cards.push(newCard);
-    return { cards, deck, newCard };
-  }
-
-  static cardToString(card) {
-    return `${card.rank}${card.suit}`;
-  }
-
-  static formatCards(cards) {
-    return cards.map(card => this.cardToString(card));
+    const multipliers = { BLACKJACK: 2.5, WIN: 2, PUSH: 1, BUST: 0, LOSE: 0 };
+    return Math.round(betAmount * (multipliers[result] || 0));
   }
 }
 
